@@ -1,0 +1,1 @@
+Add trusted project notes here as Markdown (.md) or plain text (.txt). The starter retrieves relevant excerpts using lightweight keyword matching. Do not put secrets or sensitive personal data in knowledge documents.

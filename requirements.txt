@@ -1,0 +1,13 @@
+streamlit>=1.36
+openai>=1.40
+python-dotenv>=1.0
+langchain>=0.3
+langchain-core>=0.3
+langchain-openai>=0.2
+langchain-chroma>=0.1
+langchain-text-splitters>=0.3
+langchain-experimental>=0.3
+chromadb>=0.5
+duckdb>=1.1
+databricks-sql-connector>=3.5
+pandas>=2.0
