@@ -143,8 +143,17 @@ if section=='RAG Agent':
         st.session_state.messages.append({'role':'assistant','content':answer})
     if st.button('Clear conversation'): st.session_state.messages=[]; st.rerun()
 elif section=='Architecture and Phase 1':
-    hero('SYSTEM OVERVIEW','Architecture and Phase 1','A readable explanation of the data platform and recruiter-facing AI application. Architecture is native UI content—not a diagram image.')
-    st.markdown('### End-to-end view')
+    hero('SYSTEM OVERVIEW','Architecture and Phase 1','Complete data engineering and recruiter-facing AI application architecture.')
+    st.markdown('### End-to-end system architecture')
+    from pathlib import Path
+    img1 = Path('docs/images/f1_system_architecture.png')
+    if img1.exists():
+        st.image(str(img1), caption='Formula 1 AI Data Engineering & Intelligent Q&A System', use_container_width=True)
+    img2 = Path('docs/images/f1_agent_architecture.png')
+    if img2.exists():
+        st.markdown('### Recruiter-facing agent architecture')
+        st.image(str(img2), caption='Recruiter-Facing Agent Architecture & Tool Routing', use_container_width=True)
+    st.markdown('### Workflow breakdown')
     flow=[('1 · User question','A recruiter asks a structured, knowledge-based, or hybrid question.'),('2 · Intent and tool routing','The agent chooses analytical data (SQL), reference knowledge (RAG), or both.'),('3 · Tool execution','SQL queries Gold analytical tables; RAG retrieves relevant F1 knowledge documents.'),('4 · LLM synthesis','The language model combines tool results and explains the answer with evidence.'),('5 · Answer','The UI presents a concise response and source references in chat.')]
     for title,desc in flow: st.markdown('<div class="node"><strong>'+title+'</strong><br><span class="small">'+desc+'</span></div><div class="arrow">↓</div>',unsafe_allow_html=True)
     st.markdown('### Phase 1 · Databricks Medallion data engineering')

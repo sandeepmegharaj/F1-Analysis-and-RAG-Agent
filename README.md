@@ -7,6 +7,10 @@ A Formula 1 data platform and analytical intelligence application combining Data
 
 ---
 
+## End-to-End System Architecture
+
+![Formula 1 AI Data Engineering and Intelligent QA System](docs/images/f1_system_architecture.png)
+
 ## Architecture Overview
 
 The system operates across two interconnected phases:
@@ -17,28 +21,27 @@ The system operates across two interconnected phases:
 2. Phase 2: Analytics and RAG Intelligence Engine
    A hybrid serving tier combining read-only analytical SQL execution against Gold Delta tables with semantic search across an embedded vector database, synthesized through a Large Language Model.
 
-```
-[Raw Sources: Excel / Ergast API]
-              |
-              v
- [Databricks Bronze Layer: Raw Delta Tables + Ingestion Metadata]
-              |
-              v
- [Databricks Silver Layer: Conformed Types, Deduplication, Cleansing]
-              |
-              v
- [Databricks Gold Layer: Star Schema (Fact & Dimension Delta Tables)]
-       /                              \
-      v                                v
-[SQL Analytics Engine]       [ChromaDB Vector Store]
-(Databricks SQL / DuckDB)    (Sentence Transformers / Embeddings)
-       \                              /
-        v                            v
-    [LLM Synthesis Tier (Azure OpenAI / OpenAI GPT-4o)]
-                          |
-                          v
-        [Streamlit Analytical Web Interface]
-```
+---
+
+## AI Agent Architecture and Tool Routing
+
+![Recruiter-Facing Agent Architecture](docs/images/f1_agent_architecture.png)
+
+The application provides an intelligent agent interface connected to both structured analytical data and unstructured narrative documents:
+
+1. Structured Analytics (SQL Tool)
+   - Executes read-only queries against Gold analytical Delta tables (dim_races, dim_drivers, dim_constructors, fact_results).
+   - Powered by Databricks SQL Warehouse in production or embedded in-memory DuckDB for serverless execution.
+   - Ideal for quantitative facts, driver standings, race outcomes, and points aggregations.
+
+2. Unstructured Knowledge (RAG Tool)
+   - Executes persistent semantic retrieval across Formula 1 regulations, circuit specifications, and historical records.
+   - Documents are processed via recursive text splitters, embedded via Sentence Transformers or OpenAI embeddings, and stored in ChromaDB.
+   - Ideal for narrative questions, circuit complexities, overtaking dynamics, and sporting regulations.
+
+3. Hybrid Synthesis Tier
+   - Dynamically combines verified tabular statistics from Gold Delta tables with domain knowledge from the vector store.
+   - Synthesizes findings using Azure OpenAI / OpenAI GPT-4o and grounds responses with square-bracket source citations.
 
 ---
 
