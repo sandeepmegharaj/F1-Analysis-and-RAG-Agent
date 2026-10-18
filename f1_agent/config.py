@@ -21,8 +21,8 @@ def secret(name: str, section: str|None=None, key: str|None=None, default=None):
 def gold_backend(): return (secret('GOLD_BACKEND','databricks','gold_backend','local_delta') or 'local_delta').lower()
 def table_mapping():
     raw=secret('GOLD_TABLES','databricks','gold_tables','')
-    if isinstance(raw,dict): return {str(k):str(v) for k,v in raw.items()}
-    if raw:
+    if hasattr(raw, 'items'): return {str(k):str(v) for k,v in raw.items()}
+    if isinstance(raw, str) and raw.strip():
         try: return {str(k):str(v) for k,v in json.loads(raw).items()}
         except Exception: pass
     return {}

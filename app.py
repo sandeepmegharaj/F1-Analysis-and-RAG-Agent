@@ -68,8 +68,7 @@ def ask(question,docs=None):
         return '**Setup needed:** add Azure OpenAI or OpenAI credentials to private environment or Streamlit secrets.'
     try: hits=retrieve(question,docs)
     except Exception as e: return '**RAG setup issue:** '+str(e)
-    if not hits: return 'No relevant knowledge passages found. Add Markdown/text sources and build the Chroma index.'
-    context='\n\n'.join('SOURCE: '+n+'\n'+text[:5000] for n,text in hits)
+    context='\n\n'.join('SOURCE: '+n+'\n'+text[:5000] for n,text in hits) if hits else ''
     if azure_key and azure_endpoint:
         from openai import AzureOpenAI
         client = AzureOpenAI(
@@ -82,9 +81,15 @@ def ask(question,docs=None):
         from openai import OpenAI
         client = OpenAI(api_key=openai_key)
         model = secret('OPENAI_CHAT_MODEL', 'openai', default='gpt-4o')
+    system_prompt = (
+        'You are Apex, an expert Formula 1 and data intelligence assistant. '
+        'When relevant knowledge excerpts are provided below, synthesize them directly and cite their filenames in square brackets like [filename.md]. '
+        'For general Formula 1 questions, driver stats, rules, circuits, countries, or historical records, provide an accurate, high-quality response.'
+    )
+    user_prompt = f"Question: {question}" + (f"\n\nRetrieved excerpts:\n{context}" if context else "")
     resp=client.chat.completions.create(model=model,temperature=.2,messages=[
-      {'role':'system','content':'You are Apex, a careful Formula 1 assistant. Answer only from retrieved excerpts; state when unsupported. Cite filenames in square brackets.'},
-      {'role':'user','content':'Question: '+question+'\n\nRetrieved excerpts:\n'+context}])
+      {'role':'system','content':system_prompt},
+      {'role':'user','content':user_prompt}])
     return resp.choices[0].message.content or 'No answer returned.'
 
 def hero(kicker,title,subtitle):
