@@ -1,228 +1,80 @@
-# Apex F1: Data Engineering Platform and AI Knowledge Assistant
+# Apex F1: Data Platform & AI Knowledge Assistant
 
-A Formula 1 data platform and analytical intelligence application combining Databricks Lakehouse architecture, Medallion ETL pipelines, Delta Lake storage, and a Retrieval-Augmented Generation (RAG) assistant.
+Formula 1 analytical platform combining Databricks Lakehouse pipelines, Delta Lake storage, and a RAG intelligence assistant.
 
 - Live Application: https://f1agent.streamlit.app/
-- Source Code: https://github.com/sandeepmegharaj/F1-Analysis-and-RAG-Agent
+- GitHub Repository: https://github.com/sandeepmegharaj/F1-Analysis-and-RAG-Agent
 
 ---
 
-## End-to-End System Architecture
+## System Architecture
 
-![Formula 1 AI Data Engineering and Intelligent QA System](docs/images/f1_system_architecture.png)
-
-## Architecture Overview
-
-The system operates across two interconnected phases:
-
-1. Phase 1: Data Engineering Platform
-   An end-to-end lakehouse pipeline executing raw data ingestion, transformation, schema validation, quarantine handling, and dimensional modeling across Databricks Bronze, Silver, and Gold Delta layers.
-
-2. Phase 2: Analytics and RAG Intelligence Engine
-   A hybrid serving tier combining read-only analytical SQL execution against Gold Delta tables with semantic search across an embedded vector database, synthesized through a Large Language Model.
-
----
-
-## AI Agent Architecture and Tool Routing
-
-![Recruiter-Facing Agent Architecture](docs/images/f1_agent_architecture.png)
-
-The application provides an intelligent agent interface connected to both structured analytical data and unstructured narrative documents:
-
-1. Structured Analytics (SQL Tool)
-   - Executes read-only queries against Gold analytical Delta tables (dim_races, dim_drivers, dim_constructors, fact_results).
-   - Powered by Databricks SQL Warehouse in production or embedded in-memory DuckDB for serverless execution.
-   - Ideal for quantitative facts, driver standings, race outcomes, and points aggregations.
-
-2. Unstructured Knowledge (RAG Tool)
-   - Executes persistent semantic retrieval across Formula 1 regulations, circuit specifications, and historical records.
-   - Documents are processed via recursive text splitters, embedded via Sentence Transformers or OpenAI embeddings, and stored in ChromaDB.
-   - Ideal for narrative questions, circuit complexities, overtaking dynamics, and sporting regulations.
-
-3. Hybrid Synthesis Tier
-   - Dynamically combines verified tabular statistics from Gold Delta tables with domain knowledge from the vector store.
-   - Synthesizes findings using Azure OpenAI / OpenAI GPT-4o and grounds responses with square-bracket source citations.
+![Formula 1 AI Data Engineering & Intelligent Q&A System](docs/images/f1_system_architecture.png)
 
 ---
 
 ## Data Engineering Architecture
 
-### 1. Ingestion and Medallion Architecture
+### Medallion Pipeline Flow
+- Bronze Layer: Raw landing from source files (circuits, races, drivers, constructors, results) with ingestion metadata and full audit lineage.
+- Silver Layer: Schema conformance, type validation, string normalization, and quarantine handling for irregular records.
+- Gold Layer: Analytics-ready dimensional star schema for high-performance querying.
 
-Data flows through a structured multi-hop architecture implemented in Databricks and Delta Lake:
+### Gold Star Schema Model
+- dim_drivers: Driver profiles, numbers, codes, nationalities.
+- dim_constructors: Team identities, nationalities, historical records.
+- dim_races: Circuit info, rounds, countries, dates.
+- fact_results: Granular race and sprint outcomes, finishing positions, points, lap counts, fastest laps.
 
-#### Bronze Layer (Raw Landing)
-- Ingests source datasets (circuits, races, drivers, constructors, qualifying, sprint, and race results).
-- Preserves raw source records in native format with original naming.
-- Appends platform ingestion metadata: `_ingestion_timestamp`, `_source_file`, `_batch_id`.
-- Backed by Delta Lake transaction logs (`_delta_log`) for full lineage and auditability.
-
-#### Silver Layer (Cleaned, Validated, and Conformed)
-- Type casting and schema enforcement across temporal, numeric, and string fields.
-- String normalization: trimming whitespace, case standardization, handling null values.
-- Referential integrity validation: verifies foreign key consistency between races, drivers, constructors, and results.
-- Quarantine logic: records with irreconcilable discrepancies or missing required surrogate keys are quarantined rather than discarded, preserving pipeline stability.
-- Deduplication and business-rule validation (e.g., driver grid and finishing positions).
-
-#### Gold Layer (Analytics-Ready Dimensional Model)
-The Gold tier models data into a star schema optimized for analytical query performance and downstream BI:
-
-- `dim_drivers`: Driver biographical details, code, permanent number, nationality, and historical reference IDs.
-- `dim_constructors`: Constructor identity, nationality, lineage, and operational history.
-- `dim_races`: Grand Prix calendar dimension, circuit details, round, country, coordinates, and date-time attributes.
-- `fact_results`: Granular race event facts containing points, finishing position, grid position, laps completed, fastest lap time, pit stop counts, and session type differentiator (`race` vs `sprint`).
-
-### 2. Delta Lake and Storage Engine
-- ACID Transactions: Delta Lake transaction logs guarantee atomic updates and pipeline consistency during re-runs.
-- Schema Enforcement: Prevents bad data writes that violate the schema definitions.
-- Time Travel: Capability to query previous table versions using Delta history for regression testing and debugging.
-- Storage Optimization: Parquet columnar file format with Snappy compression, partitioned by race season.
-
-### 3. Query Execution Engines
-
-#### Databricks SQL Warehouse (Enterprise Mode)
-- Connects through the Databricks SQL execution connector via HTTP paths and personal access tokens.
-- Queries run against Unity Catalog namespaces (`catalog.schema.table`).
-- Read-only execution policy: Enforces strict query validation, rejecting any mutating operations (`INSERT`, `UPDATE`, `DROP`, `ALTER`, `MERGE`, `DELETE`).
-
-#### Local DuckDB Delta Engine (Edge / Embedded Mode)
-- In environments without active cluster connectivity, DuckDB loads the native `delta` extension.
-- Scans local Delta tables directly via `delta_scan()` using local file paths, reading table metadata from `_delta_log`.
-- Provides serverless, in-memory OLAP query speeds without requiring a running cloud cluster.
-
-### 4. Workflow Orchestration (Apache Airflow)
-Pipeline dependencies and periodic updates are orchestrated via Airflow DAGs located in `dags/`:
-- `validate_configured_gold`: Verifies connectivity, table accessibility, and schema integrity across all Gold dimension and fact tables.
-- `rebuild_chroma_index`: Automatically synchronizes and rebuilds semantic vector indices when knowledge files or underlying data change.
+### Storage and Query Engines
+- Delta Lake: ACID transactions, schema enforcement, time-travel auditing, and Parquet columnar storage.
+- Databricks SQL Warehouse: Read-only enterprise query endpoint via Unity Catalog governance.
+- DuckDB Delta Scan: Embedded serverless in-memory OLAP engine querying local Delta tables.
+- Airflow Orchestration: Automated DAGs (`dags/f1_refresh_dag.py`) for schema verification and index refreshes.
 
 ---
 
-## Technology Stack
+## AI Agent & Tool Routing
 
-- Data Lakehouse Platform: Databricks, Apache Spark
-- Storage and Table Format: Delta Lake, Apache Parquet
-- Data Governance: Unity Catalog
-- Query Engines: Databricks SQL Warehouse, DuckDB (with Delta extension)
-- Orchestration: Apache Airflow
-- Vector Database: ChromaDB (persistent local store)
-- Embeddings: Local Sentence Transformers (`all-MiniLM-L6-v2`) and OpenAI (`text-embedding-3-small`)
-- Large Language Models: Azure OpenAI Service / OpenAI GPT-4o
-- RAG and Chunking Framework: LangChain, Recursive Character Text Splitter
-- Application Layer: Streamlit, Python 3.10+
+![Recruiter-Facing Agent Architecture](docs/images/f1_agent_architecture.png)
+
+### Query Routing
+- Structured Analytics (SQL Tool): Queries Gold Delta tables via DuckDB or Databricks SQL for counts, points, and rankings.
+- Unstructured Knowledge (RAG Tool): Searches persistent ChromaDB vector store for circuits, historical facts, and sporting rules.
+- Hybrid Synthesis Tier: Blends structured SQL metrics with semantic document excerpts, returning grounded answers with citations.
 
 ---
 
-## Repository Structure
+## Tech Stack
 
-```
-├── .streamlit/
-│   ├── config.toml                # Dark theme UI configuration
-│   └── secrets.toml.example       # Template for API keys and connection tokens
-├── dags/
-│   └── f1_refresh_dag.py          # Airflow DAG for Gold schema validation and index refresh
-├── data/
-│   ├── dim_constructors/          # Constructor dimension Delta table
-│   ├── dim_drivers/               # Driver dimension Delta table
-│   ├── dim_races/                 # Race dimension Delta table
-│   └── fact_results/              # Race and sprint results fact Delta table
-├── f1_agent/
-│   ├── config.py                  # Secrets resolution and environment mappings
-│   ├── rag.py                     # Chroma vector store, embedding setup, chunking, and retrieval
-│   └── sql_tools.py               # Read-only SQL query runner (Databricks SQL & DuckDB Delta)
-├── knowledge_base/
-│   ├── f1_2024_season_and_regulations.md  # 2024 grid, teams, scoring, and sprint rules
-│   ├── f1_circuits_and_countries.md       # Circuit calendar and host nations
-│   ├── f1_records_and_history.md          # Driver stats, historical scoring, and championships
-│   └── project_architecture.md            # System architecture and engineering notes
-├── scripts/
-│   └── build_vector_index.py      # Standalone vector index generation script
-├── app.py                         # Streamlit application entry point
-├── requirements.txt               # Project dependencies
-└── README.md                      # Documentation
-```
+- Lakehouse & Storage: Databricks, Apache Spark, Delta Lake, Apache Parquet
+- Query Engines: Databricks SQL Warehouse, DuckDB
+- Governance & Orchestration: Unity Catalog, Apache Airflow
+- Vector Database: ChromaDB
+- LLM & Embeddings: Azure OpenAI / OpenAI GPT-4o, Sentence Transformers
+- Framework & App: LangChain, Streamlit, Python 3.10+
 
 ---
 
-## Local Setup and Installation
+## Quick Setup & Run
 
-### 1. Prerequisites
-- Python 3.10 or higher
-- Git
-
-### 2. Environment Setup
-Clone the repository and set up a virtual environment:
-
+### 1. Clone and Install
 ```bash
 git clone https://github.com/sandeepmegharaj/F1-Analysis-and-RAG-Agent.git
 cd F1-Analysis-and-RAG-Agent
 python -m venv .venv
-```
-
-Activate the virtual environment:
-- Windows (PowerShell):
-  ```powershell
-  .\.venv\Scripts\Activate.ps1
-  ```
-- Linux / macOS:
-  ```bash
-  source .venv/bin/activate
-  ```
-
-Install required packages:
-```bash
+source .venv/bin/activate  # Windows: .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-### 3. Configuration
-Copy `.env.example` to `.env` and fill in your credentials:
-
+### 2. Configure Environment
 ```bash
 cp .env.example .env
 ```
+Add your `OPENAI_API_KEY` (or Azure OpenAI credentials) and optional Databricks SQL credentials in `.env`.
 
-Configuration parameters:
-
-```ini
-# OpenAI / Azure OpenAI Credentials
-OPENAI_API_KEY="your-api-key"
-OPENAI_CHAT_MODEL="gpt-4o"
-OPENAI_EMBEDDING_MODEL="text-embedding-3-small"
-
-# Or Azure OpenAI
-AZURE_OPENAI_KEY="your-azure-key"
-AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
-AZURE_OPENAI_DEPLOYMENT="gpt-4o"
-
-# Vector Store Settings
-CHROMA_DIR="./chroma_db"
-CHUNKING_STRATEGY="recursive"
-CHUNK_SIZE=900
-CHUNK_OVERLAP=120
-
-# Gold Layer Backend: 'local_delta' or 'databricks_sql'
-GOLD_BACKEND=local_delta
-GOLD_DATA_DIR=./data
-
-# For Databricks SQL (Optional)
-DATABRICKS_SERVER_HOSTNAME="your-databricks-host.cloud.databricks.com"
-DATABRICKS_HTTP_PATH="/sql/1.0/warehouses/your-warehouse-id"
-DATABRICKS_TOKEN="your-pat-token"
-GOLD_TABLES='{"dim_races":"catalog.schema.dim_races","dim_drivers":"catalog.schema.dim_drivers","dim_constructors":"catalog.schema.dim_constructors","fact_results":"catalog.schema.fact_results"}'
-```
-
-### 4. Build Vector Index and Run App
-Run the Streamlit application:
-
+### 3. Launch Application
 ```bash
 streamlit run app.py
 ```
-
-The application will initialize at `http://localhost:8501`. On initial launch, the vector store automatically processes and indexes knowledge files into ChromaDB if not already present.
-
----
-
-## Security and Governance
-
-- Credential Isolation: API keys, tokens, and warehouse endpoints are resolved from private environments or Streamlit Secrets. No credentials are committed to version control.
-- Read-Only SQL Policy: Query inputs are parsed with regular expressions to prohibit data definition or data modification language (`CREATE`, `DROP`, `INSERT`, `UPDATE`, `DELETE`, `MERGE`, `ALTER`).
-- Table Access Boundaries: SQL queries are validated against permitted logical Gold table definitions to prevent arbitrary database access.
+Application opens at `http://localhost:8501`. Missing Chroma vector indices are automatically generated on first launch.
