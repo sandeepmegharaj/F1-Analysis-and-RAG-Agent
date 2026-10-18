@@ -69,7 +69,11 @@ def build_index():
     Chroma.from_documents(chunks,emb,collection_name=COLLECTION,persist_directory=str(DB))
     return {'sources':len(docs),'chunks':len(chunks),'path':str(DB),'strategy':secret('CHUNKING_STRATEGY','rag','chunking_strategy','recursive')}
 def get_store():
-    if not DB.exists() or not any(DB.iterdir()): raise RuntimeError('Chroma index is missing. Build it from the app sidebar first.')
+    if not DB.exists() or not any(DB.iterdir()):
+        try:
+            build_index()
+        except Exception as e:
+            raise RuntimeError(f"Chroma index is missing and auto-build failed: {e}. Build it from the app sidebar first.") from e
     return Chroma(collection_name=COLLECTION,embedding_function=embeddings(),persist_directory=str(DB))
 def retrieve(query,k=5):
     return [{'text':d.page_content,'source':d.metadata.get('source','unknown')} for d in get_store().similarity_search(query,k=int(k))]
